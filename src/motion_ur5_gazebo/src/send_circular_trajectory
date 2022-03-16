@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+
+# =======================================
+# author 	: 	jhon charaja
+# email 	: 	jhon.charaja@utec.edu.pe
+# info 	    : 	send circular trajectory
+# =======================================
+
+
+import rospy 							# ROS with Python
+import os 								# Manipulate path names
+import pandas as pd 					# Save data
+import numpy as np
+from sensor_msgs.msg import JointState 	# to read angular position and velocity
+from std_msgs.msg import Bool
+from my_control_gazebo.msg import Pose # to send pose, dpose and ddpose to robot
+#from labpythonlib.lab_functions import *
+
+
+class TrajectoryPublisher():
+    def __init__(self):
+        # create node
+        rospy.init_node("node")
+        # pubisher: end-effector pose         
+        self.pub_pose = rospy.Publisher('cartesian_impedance_controller/pose_command', Pose, queue_size=1000)
+        # subscriber: recive start signal
+        self.sub_start_command = rospy.Subscriber('cartesian_impedance_controller/start_command', Bool, self.start_cb)
+        # flag to indicates if robot is in home position
+        self.home_position = False
+
+    def start_cb(self, msg):
+        self.home_position= msg.data
+
+    def publish_pose(self, msg):
+        self.pub_pose.publish(msg)
+
+def main():
+    # object to manage trajectory sending
+    trajPub = TrajectoryPublisher()
+
+    # object(message)
+    pose = Pose()
+
+    # Loop rate (in Hz)
+    freq = 100
+    dt = 1/freq                    # 33  [ms]
+    rate = rospy.Rate(freq)        # 100 [Hz]
+
+    # simulation    
+    t = 0
+    while not rospy.is_shutdown():
+        x, dx, ddx = circular_trayectory_generator(t,freq_xyz=0.1, radius=0.05, z_amp=0)
+
+        w = rpy2angularVel(x[3:6], dx[3:6])
+        dw = rpy2angularAccel(x[3:6], dx[3:6], ddx[3:6])
+
+        pose.x = x[0]
+        pose.y = x[1]
+        pose.z = x[2]
+        pose.roll = x[3]
+        pose.pitch = x[4]
+        pose.yaw = x[5]
+        
+        pose.dx = dx[0]
+        pose.dy = dx[1]
+        pose.dz = dx[2]
+        pose.wx = w[0]
+        pose.wy = w[1]
+        pose.wz = w[2]
+
+        pose.ddx= ddx[0]
+        pose.ddy= ddx[1]
+        pose.ddz= ddx[2]
+        pose.dwx= dw[0]
+        pose.dwy= dw[1]
+        pose.dwz= dw[2]
+
+        trajPub.publish_pose(pose)
+
+        # update time
+        if trajPub.home_position:
+            t=t+dt
+
+        # Wait for the next iteration
+        rate.sleep()    
+
+def circular_trayectory_generator(t,radius=0.05, z_amp=0.02, rpy_amp=np.zeros(3), freq_xyz=0.1, freq_rpy=0.1):
+    """
+    @info generate points of a circular trayectory.
+
+    @inputs:
+    -------
+        - t : simulation time [s]
+        - radius: radius of circular trajectory on xy-plane [m]
+        - z_amp: amplitude of sinusoidal trajectory on z-plane [m]
+        - freq: frequency [hz]
+
+    Outpus:
+    -------
+        - pose: end-effector position (xyz) and orientation (rpy)   
+        - dpose: end-effector velocity (xyz) and dorientation (rpy)        
+    """
+
+    # Parameters of circular trayetory     
+    w_xyz = 2*np.pi*freq_xyz   # angular velocity [rad/s]
+    w_rpy = 2*np.pi*freq_rpy   # angular velocity [rad/s]
+    pos0 = np.array([0.5, 0.0, 0.0]) # initial states
+
+    # Cartesian pos, vel, accel
+    pos = np.array([pos0[0]+radius*np.cos(w_xyz*(t)), pos0[1]+radius*np.sin(w_xyz*(t)), pos0[2]+z_amp*np.sin(w_xyz*t)]) 
+    vel = np.array([radius*(-w_xyz)*np.sin(w_xyz*(t)), radius*(+w_xyz)*np.cos(w_xyz*(t)), z_amp*w_xyz*np.cos(w_xyz*t)])
+    acc = np.array([radius*(-w_xyz*w_xyz)*np.cos(w_xyz*(t)), radius*(-w_xyz*w_xyz)*np.sin(w_xyz*(t)), z_amp*(-w_xyz*w_xyz)*np.sin(w_xyz*t)])
+    # rpy orientation
+    R  = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
+    rpy = rot2rpy(R) + rpy_amp*np.sin(w_rpy*t)
+    drpy = rpy_amp*w_rpy*np.cos(w_rpy*t)
+    ddrpy = rpy_amp*(-w_rpy*w_rpy)*np.sin(w_rpy*t)
+    
+    # return end-effector pose and its time-derivative
+    return np.concatenate((pos, rpy), axis=0), np.concatenate((vel, drpy), axis=0), np.concatenate((acc, ddrpy), axis=0)
+
+def rot2rpy(R):
+    """
+    @info: computes roll, pitch, yaw (ZYX euler angles) from rotation matrix
+    
+    @inputs:
+    -------
+        - R: rotation matrix        
+    @outputs:
+    --------
+        - rpy[0]: rotation in z-axis (roll)
+        - rpy[1]: rotation in y-axis (pitch)
+        - rpy[2]: rotation in x-axis (yaw)
+    """
+    R32 = R[2,1]
+    R31 = R[2,0]
+    R33 = R[2,2]
+    R21 = R[1,0]
+    R11 = R[0,0]
+    rpy = np.zeros(3)    
+    rpy[1] = np.arctan2(-R31, np.sqrt(R32*R32 + R33*R33))
+    rpy[0] = np.arctan2(R21/np.cos(rpy[1]), R11/np.cos(rpy[1]))
+    rpy[2] = np.arctan2(R32/np.cos(rpy[1]), R33/np.cos(rpy[1]))
+
+    return rpy
+
+def rpy2angularVel(rpy, drpy):
+    """
+    @info: compute angular velocity (w) from euler angles (roll, pitch and yaw) and its derivaties
+    @inputs:
+    -------
+        - rpy[0]: rotation in z-axis (roll)
+        - rpy[1]: rotation in y-axis (pitch)
+        - rpy[2]: rotation in x-axis (yaw)
+        - drpy[0]: rotation ratio in z-axis
+        - drpy[1]: rotation ratio in y-axis
+        - drpy[2]: rotation ratio in x-axis
+    @outputs:
+    --------
+        - w: angular velocity
+    """        
+    E0 = np.array(  [[0, -np.sin(rpy[0]), np.cos(rpy[0])*np.cos(rpy[1])], \
+                    [0,   np.cos(rpy[0]), np.sin(rpy[0])*np.cos(rpy[1])], \
+                    [1,         0,          -np.sin(rpy[1])       ]])
+    
+    w = np.dot(E0, drpy)
+    return w    
+
+def rpy2angularAccel(rpy, drpy, ddrpy):
+    """
+    @info: compute angular velocity (w) from euler angles (roll, pitch and yaw) and its derivaties
+    @inputs:
+    -------
+        - rpy[0]: rotation in z-axis (roll)
+        - rpy[1]: rotation in y-axis (pitch)
+        - rpy[2]: rotation in x-axis (yaw)
+        - drpy[0]: rotation speed in z-axis
+        - drpy[1]: rotation speed in y-axis
+        - drpy[2]: rotation speed in z-axis
+        - ddrpy[0]: rotation acceleration in z-axis
+        - ddrpy[1]: rotation acceleration in y-axis
+        - ddrpy[2]: rotation acceleration in x-axis        
+    @outputs:
+    --------
+        - dw: angular acceleration
+    """        
+    E0 = np.array(  [[0, -np.sin(rpy[0]), np.cos(rpy[0])*np.cos(rpy[1])], \
+                    [0,   np.cos(rpy[0]), np.sin(rpy[0])*np.cos(rpy[1])], \
+                    [1,         0,          -np.sin(rpy[1])       ]])
+    
+    E1 = np.array( [[0, -np.cos(rpy[0])*drpy[0], -np.sin(rpy[0])*drpy[0]*np.cos(rpy[1])-np.cos(rpy[0])*np.sin(rpy[1])*drpy[1]], \
+                    [0, -np.sin(rpy[0])*drpy[0],  np.cos(rpy[0])*drpy[0]*np.cos(rpy[1])-np.sin(rpy[0])*np.sin(rpy[1])*drpy[1]], \
+                    [0,         0,               -np.cos(rpy[1])*drpy[1]   ]])
+    dw = np.dot(E1, drpy) + np.dot(E0, ddrpy)
+    return dw
+
+
+if __name__ == '__main__':
+    main()    

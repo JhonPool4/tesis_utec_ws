@@ -1,0 +1,14 @@
+<launch>
+    <!-- send trajectory of exercise 2 -->
+    <node name="send_star_trajectory" pkg="motion_ur5_gazebo" type="send_star_trajectory" output="screen" /> 
+    
+    <!--display ur5 on gazebo-->
+    <include file="$(find my_control_gazebo)/launch/ur5_gazebo.launch">
+        <arg name="urdf" value="ur5_box" />
+    </include>
+
+    <!--display ur5 on gazebo-->
+    <include file="$(find my_control_gazebo)/launch/ur5_controllers.launch">
+        <arg name="control_type" value="adaptive" />
+    </include>    
+</launch>

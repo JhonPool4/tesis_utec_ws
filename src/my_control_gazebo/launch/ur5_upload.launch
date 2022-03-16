@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--add ur5 urdf to rosparam server, display robot on gazebo-->
+<launch>
+	<arg name="limited" default="true" doc="If true, limits joint range [-PI, PI] on all joints." />
+	<arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface" />
+	<arg name="urdf" doc="load urdf of ur5 wit box"/>
+	
+	<group if="$(eval urdf == 'ur5_box')">
+		<param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ur5_description)/urdf/ur5_box_joint_limited_robot.urdf.xacro' transmission_hw_interface:=$(arg transmission_hw_interface)" />
+	</group>	
+
+	<group if="$(eval urdf == 'ur5')">
+		<param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ur5_description)/urdf/ur5_joint_limited_robot.urdf.xacro' transmission_hw_interface:=$(arg transmission_hw_interface)" />
+	</group>	
+	
+
+	<!-- push robot_description to factory and spawn robot in gazebo -->
+	<node name="spawn_gazebo_ur5_robot" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model ur5 
+		-z 0.5
+		-x 0.0
+		-y 0.0
+		-J shoulder_pan_joint   -0.187932		
+		-J shoulder_lift_joint 	-0.922357
+		-J elbow_joint			 1.99554
+		-J wrist_1_joint 		-2.62668
+		-J wrist_2_joint 		-1.57547	
+		-J wrist_3_joint 		-0.186816	
+		" respawn="false" output="screen" /> 
+</launch>

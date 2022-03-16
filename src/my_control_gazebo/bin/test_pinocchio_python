@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import numpy as np
+import pinocchio as pin
+from labpythonlib.lab_functions import *
+
+urdf_path ="/home/jhon/catkin_ws/journal_ws/src/ur5_description/urdf/ur5_joint_limited_robot.urdf"
+robot = pin.robot_wrapper.RobotWrapper.BuildFromURDF(urdf_path)
+
+frame_ee = robot.model.getFrameId('ee_link') 
+print(f"frame: {frame_ee}")
+
+q = np.zeros(6)
+dq = np.array([1,0,0,0,0,0])
+z = np.zeros(6)
+
+M = pin.crba(robot.model, robot.data, q)
+print(f"\n\nM: {np.round(M,5)}")
+
+b = pin.rnea(robot.model, robot.data, q, dq, z)
+print(f"\n\nb: {np.round(b,5)}")
+
+pin.computeJointJacobians(robot.model, robot.data, q)
+J = pin.getFrameJacobian(robot.model, robot.data, frame_ee, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+print(f"\n\nJ: {np.round(J,5)}")
+
+pin.computeJointJacobiansTimeVariation(robot.model, robot.data, q, dq)
+dJ = pin.getFrameJacobianTimeVariation(robot.model, robot.data, frame_ee, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+print(f"\n\ndJ: {np.round(dJ,5)}")
+
+invJ = damped_pinv(J)
+print(f"\n\ninvJ: {np.round(invJ,5)}")
+
+v = J[0:3,0:6].dot(dq)
+w = J[3:6,0:6].dot(dq)
+print(f"\n\nv: {np.round(v,5)}")
+print(f"\n\nw: {np.round(w,5)}")

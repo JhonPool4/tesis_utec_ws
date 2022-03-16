@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- load control file -->
+<launch>
+    <arg name="control_type" doc="(i) cartesian_adaptive_controller or (ii) cartesian_impedance_controller" />
+    
+    <!-- Load joint controller configurations from YAML file to parameter server -->
+    <rosparam file="$(find my_control_gazebo)/config/test_control.yaml" command="load"/> 
+
+    <!-- load the controllers  -->
+    <group if="$(eval control_type=='impedance')"> 
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+        output="screen" args="joint_state_controller cartesian_impedance_controller"/> 
+    </group>
+    <group if="$(eval control_type=='adaptive')"> 
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+        output="screen" args="joint_state_controller cartesian_adaptive_controller"/> 
+    </group>  
+
+</launch>

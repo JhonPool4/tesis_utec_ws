@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!--creates a simulation environment on Gazebo and show UR5 robot in this environemt-->
+<launch>
+  <!-- Simulation configuration -->
+  <arg name="limited" default="true" doc="If true, limits joint range [-PI, PI] on all joints." />
+  <arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface" doc="Simulation Gazebo" />
+  <arg name="paused" default="true" doc="Starts gazebo in paused mode" />
+  <arg name="gui" default="true" doc="Starts gazebo gui" />
+  <arg name="urdf" doc="load urdf of ur5 wit box"/>
+  
+
+  <!-- startup simulated world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find ur5_description)/worlds/empty_world.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <!-- Robot UR5 -->
+  <!-- send robot urdf to param server -->
+  <include file="$(find my_control_gazebo)/launch/ur5_upload.launch">
+    <arg name="limited" value="$(arg limited)"/>
+    <arg name="transmission_hw_interface" value="$(arg transmission_hw_interface)"/>	
+    <arg name="urdf" value="$(arg urdf)"/>
+  </include>
+
+  <!-- Robot state publisher --> <!-- Convert joint states to /tf tranforms -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="125" />
+    <param name="tf_prefix" type="string" value="" />
+  </node>
+</launch>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

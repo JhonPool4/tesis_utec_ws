@@ -11,7 +11,7 @@ MESSAGE(STATUS "===========================")
 
 
 # EIGEN directory path
-set (EIGEN_INCLUDE_DIR "/home/jhon/Downloads/eigen-3.4.0")
+set (EIGEN_INCLUDE_DIR $ENV{eigen_include_dir})
 
 MARK_AS_ADVANCED (
 	EIGEN_INCLUDE_DIR

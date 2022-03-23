@@ -383,7 +383,7 @@
 
     <!-- box  -->
     <xacro:property name="width" value="0.1" /> 
-    <xacro:property name="mass" value="1" />
+    <xacro:property name="mass" value="3" />
 
     <link name="box">
       <visual>

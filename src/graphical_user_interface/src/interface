@@ -1,0 +1,442 @@
+#!/usr/bin/env python3
+# =======================================
+# author 	: 	jhon charaja
+# email 	: 	jhon.charaja@utec.edu.pe
+# info 	    : 	graphical user interface
+# =======================================
+
+# general libraries
+import sys
+import numpy as np # math library
+# ros libraries and msgs
+import rospy # ros and python library
+from std_msgs.msg import Bool
+from graphical_user_interface.msg import PatientData
+
+# pyqt5 libraries
+from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtWidgets import QDesktopWidget, QWidget, QTabWidget # widgets
+from PyQt5.QtWidgets import QVBoxLayout, QGridLayout # layouts
+from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton
+from PyQt5.QtGui 	 import QIcon, QFont, QPixmap
+from PyQt5.QtCore    import QSize, Qt
+
+class GuiNode():
+    def __init__(self):
+        # create node
+        rospy.init_node("gui_node")
+        # subscriber: recive start command from gazebo
+        self.sub_start_command_1 = rospy.Subscriber('cartesian_adaptive_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
+        self.sub_start_command_2 = rospy.Subscriber('cartesian_impedance_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
+
+        # pubisher: send start command to trajectory generator  
+        self.pub_start_command = rospy.Publisher('trajectory_start_command', Bool, queue_size=10)
+        # publisher: send patient data
+        self.pub_patient_data = rospy.Publisher('patient_data', PatientData, queue_size=20)
+
+        # flags
+        self.home_position = False # indicates if robot is in the initial position
+        self.start_motion = False # indicates that the robot is ready to start rehabilitation
+
+    def gazebo_start_cb(self, msg):
+        self.home_position= msg.data
+
+    def publish_patient_data(self, msg):
+        self.pub_patient_data.publish(msg)
+
+    def publish_start_command(self, msg):
+        self.pub_start_command.publish(msg)
+
+
+
+class GraphicalUserInterface(QMainWindow):
+    def __init__(self):
+        super(GraphicalUserInterface, self).__init__()
+        # main configuration: title and size
+        self.title = 'Tesis: Jhon Charaja'
+        self.sg = QDesktopWidget().screenGeometry()
+        print(f"width: {self.sg.width()}, height: {self.sg.height()}")
+        self.width  = 1820
+        self.height = 1080
+        self.left = int(0.5*self.sg.width()  - 0.5*self.width)
+        self.top  = int(0.5*self.sg.height() - 0.5*self.height)        
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        self.table_widget = MyTableWidget(self)
+        self.setCentralWidget(self.table_widget)	        
+        self.show()
+
+        
+        
+class MyTableWidget(QWidget):    
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        # ros nodes for gui application
+        self.myguinode = GuiNode()
+
+        # useful variables
+        self.title_fs = 18
+        self.subtitle_fs = 15
+        self.subsubtitle_fs = 12
+        self.index_fs = 15
+        self.widgets_fs = 12
+
+        # main Box layout
+        self.layout = QVBoxLayout()
+
+        # initialize tab screen
+        self.tabs = QTabWidget()
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+        self.tab3 = QWidget()
+        self.tab4 = QWidget()
+
+        # tabs details
+        self.tabs.setIconSize(QSize(50, 50)) 
+        self.tabs.setFont(QFont("Garamond", 15, weight=QFont.Light))
+        self.tabs.setStyleSheet("background-color: white;")
+
+        # Add Tabs
+        self.tab1_index = self.tabs.addTab(self.tab1, QIcon('imgs/verde-oscuro.jpg'), "Etapa 1")
+        self.tab2_index = self.tabs.addTab(self.tab2, QIcon('imgs/verde-oscuro.jpg'), "Etapa 2")
+        self.tab3_index = self.tabs.addTab(self.tab3, QIcon('imgs/verde-oscuro.jpg'), "Etapa 3")
+        self.tab4_index = self.tabs.addTab(self.tab4, QIcon('imgs/verde-oscuro.jpg'), "Etapa 4")
+
+        # Set Main Box layout
+        self.layout.addWidget(self.tabs)        
+
+        # ===========
+        # First Tab
+        # ===========
+        # images      
+        self.img_0 = QLabel(self)
+        self.img_1 = QLabel(self)
+        self.img_2 = QLabel(self)
+        self.img_3 = QLabel(self)
+        self.img_4 = QLabel(self)
+        self.img_5 = QLabel(self)
+        self.img_6 = QLabel(self)
+        
+        self.tab1.layout = QGridLayout(self)
+
+        self.title_1 = QLabel("Sistema robotico para la rehabilitacion del movimiento")
+        self.title_1.setFont(QFont("Garamond", self.title_fs, weight=QFont.Bold))
+        self.title_1.setStyleSheet("color: black")
+        #self.title_1.setStyleSheet("border: 4px solid black")
+
+        self.title_2 = QLabel("del codo de personas",)
+        self.title_2.setFont(QFont("Garamond", self.title_fs, weight=QFont.Bold))
+        self.title_2.setStyleSheet("color: black")
+        #self.title_2.setStyleSheet("border: 4px solid black")
+
+        self.img_0.setPixmap(QPixmap('imgs/Rehabilitation_UR5_2.jpg'))        
+        #self.img_1.setStyleSheet("border: 4px solid black")
+
+        self.pushbutton = QPushButton('Empezar \n configuracion')
+        #self.pushbutton.setStyleSheet("border: 4px solid black")     
+        self.pushbutton.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))      
+        self.pushbutton.clicked.connect(self.goToTab2)				
+
+        self.tab1.layout.addWidget(self.title_1,    1, 0, 1, -1,		Qt.AlignCenter)
+        self.tab1.layout.addWidget(self.title_2,    2, 0, 1, -1,		Qt.AlignCenter)
+        self.tab1.layout.addWidget(self.img_0,      3, 0, 10,  10, 	Qt.AlignCenter)
+        self.tab1.layout.addWidget(self.pushbutton, 0, 6, -1, -1, 	Qt.AlignCenter)
+        self.tab1.setLayout(self.tab1.layout) 
+        
+        # ===========
+        # Second Tab
+        # ===========
+        
+        self.tab2.layout = QGridLayout(self)
+
+        self.title_3 = QLabel("Seleccionar modo de rehabilitacion robotica")
+        self.title_3.setFont(QFont("Garamond", self.title_fs, weight=QFont.Bold))
+        #self.title_3.setStyleSheet("border: 4px solid black")
+
+        self.label_modo_1 = QLabel("Pasivo")
+        self.label_modo_1.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.label_modo_1.setStyleSheet("color: orange")
+        #self.label_modo_1.setStyleSheet("border: 4px solid black")
+
+        self.label_modo_2 = QLabel("Asistido")
+        self.label_modo_2.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.label_modo_2.setStyleSheet("color: orange")
+        #self.label_modo_2.setStyleSheet("border: 4px solid black")
+
+        self.label_modo_3 = QLabel("Resistivo")
+        self.label_modo_3.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.label_modo_3.setStyleSheet("color: orange")
+        #self.label_modo_3.setStyleSheet("border: 4px solid black")
+        
+        self.img_1.setPixmap(QPixmap('imgs/modo_1_2.png'))
+        #self.img_1.setStyleSheet("border: 4px solid black")
+
+        self.img_2.setPixmap(QPixmap('imgs/modo_2_2.png'))        
+        #self.img_2.setStyleSheet("border: 4px solid black")
+
+        self.img_3.setPixmap(QPixmap('imgs/modo_3_2.png'))        
+        #self.img_3.setStyleSheet("border: 4px solid black")
+
+        self.pb_1 = QPushButton('Seleccionar')
+        self.pb_1.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))
+        self.pb_1.clicked.connect(self.setImageMode_1)
+
+        self.pb_2 = QPushButton('Seleccionar')
+        self.pb_2.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))
+        self.pb_2.clicked.connect(self.setImageMode_2)
+
+        self.pb_3 = QPushButton('Seleccionar')
+        self.pb_3.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))
+        self.pb_3.clicked.connect(self.setImageMode_3)
+
+        self.tab2.layout.addWidget(self.title_3, 		1, 0, 1, -1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.label_modo_1,	2, 0, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.label_modo_2,	2, 1, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.label_modo_3,	2, 2, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.img_1,			3, 0, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.img_2,			3, 1, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.img_3,			3, 2, 1,  1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.pb_1, 			4, 0, 1,   1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.pb_2, 			4, 1, 1,   1, 	Qt.AlignCenter)
+        self.tab2.layout.addWidget(self.pb_3, 			4, 2, 1,   1, 	Qt.AlignCenter)		
+        self.tab2.setLayout(self.tab2.layout)
+
+
+        # ===========
+        # Third Tab
+        # ===========
+        self.tab3.layout = QGridLayout(self)
+        self.modo = "Modo Error"
+        self.ejercicio = "Error" 		
+
+        self.title_4 = QLabel("Configurar ejercicio de rehabilitacion")
+        self.title_4.setFont(QFont("Garamond", self.title_fs, weight=QFont.Bold))
+        #self.title_4.setStyleSheet("border: 4px solid black")
+
+        self.l_modo = QLabel(self)
+        self.l_modo.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.l_modo.setStyleSheet("color: blue")
+
+        self.l_ejercicio = QLabel(self)
+        self.l_ejercicio.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.l_ejercicio.setStyleSheet("color: blue")
+
+        self.d_paciente = QLabel("Datos del paciente", self)
+        self.d_paciente.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.d_paciente.setStyleSheet("color: orange")
+
+        # longitud del brazo del paciente
+        self.textbox_l  = QLineEdit(self)
+        self.text_l     = QLabel('Longitud de brazo [mm]')  
+        self.text_l.setFont(QFont("Garamond", self.subsubtitle_fs, weight=QFont.Bold))		
+        self.textbox_l.returnPressed.connect(self.compute_rm)		
+
+        # Parametros del ejercicio
+        self.p_ejercicio = QLabel("Parametros del ejercicio", self)
+        self.p_ejercicio.setFont(QFont("Garamond", self.subtitle_fs, weight=QFont.Bold))
+        self.p_ejercicio.setStyleSheet("color: orange")
+
+        # Radio de la trayectoria
+        self.textbox_r_rm    = QLineEdit(self)
+        self.textbox_r_rm.setStyleSheet("color: red; background-color: orange;")    
+        self.textbox_r_rm.setReadOnly(True)
+        self.text_r_rm       = QLabel('Radio recomendado [mm]')
+        self.text_r_rm.setFont(QFont("Garamond", self.subsubtitle_fs, weight=QFont.Bold)) 
+
+        self.textbox_r = QLineEdit(self)
+        self.text_r     = QLabel('Radio [mm]')
+        self.text_r.setFont(QFont("Garamond", self.subsubtitle_fs, weight=QFont.Bold)) 	
+        self.textbox_r.editingFinished.connect(self.eval_radius)
+        self.textbox_r.setReadOnly(True)	
+
+
+        # velocidad de la trayectoria
+        self.textbox_v_rm = QLineEdit(self)
+        self.text_v_rm     = QLabel('Velocidad recomendada [mm/s]')
+        self.textbox_v_rm.setStyleSheet("color: red; background-color: orange;")
+        self.textbox_v_rm.setReadOnly(True)	
+        self.text_v_rm.setFont(QFont("Garamond", self.subsubtitle_fs, weight=QFont.Bold))
+
+
+        self.textbox_v = QLineEdit(self)
+        self.text_v     = QLabel('Velocidad [mm/s]')
+        self.text_v.setFont(QFont("Garamond", self.subsubtitle_fs, weight=QFont.Bold)) 
+        self.textbox_v.editingFinished.connect(self.eval_linvel)
+        self.textbox_v.setReadOnly(True)
+
+        # Dummy text
+        # Pulsador para configurar
+        self.pb_4 = QPushButton('Seleccionar y configurar', self)
+        self.pb_4.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))     
+        self.pb_4.clicked.connect(self.goToTab4) 
+
+        self.tab3.layout.addWidget(self.title_4, 		1, 0, 1, -1, 	Qt.AlignCenter)
+        self.tab3.layout.addWidget(self.img_4, 			2, 1, 6,  1, 	Qt.AlignCenter)
+        self.tab3.layout.addWidget(self.l_ejercicio, 	7, 1, 1,  2, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.l_modo, 		8, 1, 1,  2, 	Qt.AlignLeft)		
+
+        self.tab3.layout.addWidget(self.d_paciente,		2, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.text_l, 		3, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.textbox_l, 		3, 4, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.p_ejercicio, 	4, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.text_r_rm, 		5, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.textbox_r_rm, 	5, 4, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.text_r, 		6, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.textbox_r, 		6, 4, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.text_v_rm, 		7, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.textbox_v_rm, 	7, 4, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.text_v, 		8, 3, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.textbox_v, 		8, 4, 1,  1, 	Qt.AlignLeft)
+        self.tab3.layout.addWidget(self.pb_4, 			9, 3, 1,  2)
+        self.tab3.layout.setSpacing(40)
+        self.tab3.setLayout(self.tab3.layout)
+
+        # ===========
+        # Fourth Tab
+        # ===========
+        self.tab4.layout = QGridLayout(self)
+
+        self.title_5 = QLabel(self)
+        self.title_5.setFont(QFont("Garamond", self.title_fs, weight=QFont.Bold))
+
+        #self.img_5 = QLabel(self)
+        #self.img_6 = QLabel(self)
+        #self.img_6.setPixmap(QPixmap('imgs/verde-claro.png'))
+
+        self.pb_5 = QPushButton("Empezar ejercicio",self)
+        self.pb_5.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))     
+        self.pb_5.clicked.connect(self.empezarEjercicio) 
+
+        self.pb_6 = QPushButton("Detener ejercicio",self)
+        self.pb_6.setFont(QFont("Garamond", self.widgets_fs, weight=QFont.Bold))     
+        self.pb_6.clicked.connect(self.detenerEjercicio)
+
+        self.tab4.layout.addWidget(self.title_5, 		1,	0, 	1, 	-1, 	Qt.AlignCenter)
+        self.tab4.layout.addWidget(self.img_5,			2, 	0,	6,	 2, 	Qt.AlignCenter)
+        self.tab4.layout.addWidget(self.pb_5,			3,  2,  1, 	 1)
+        self.tab4.layout.addWidget(self.pb_6,			5,  2,  1, 	 1)
+        #self.tab4.layout.addWidget(self.img_6,			2, 	0,	6,	 2, 	Qt.AlignCenter)
+        self.tab4.setLayout(self.tab4.layout)        
+        
+
+        # Set Main Box layout
+        self.setLayout(self.layout)
+
+    def goToTab2(self):
+        self.tabs.setTabIcon(self.tab1_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setCurrentIndex(1)               
+
+
+    def goToTab4(self):
+        if int(float(self.textbox_v.text())) > 5 and int(float(self.textbox_r.text()))> 10:		
+            self.tabs.setTabIcon(self.tab3_index, QIcon('imgs/verde-claro.png'))
+            self.tabs.setCurrentIndex(3)
+
+    def setImageMode_1(self):
+        self.img_4.setPixmap(QPixmap('imgs/modo_1_2.png'))   
+        self.img_5.setPixmap(QPixmap('imgs/Primer_ejercicio.png'))
+        
+        self.ejercicio = "Objetivo: Seguir el vaso"
+        self.modo = "Modo de rehabilitacion pasivo" 
+        self.l_modo.setText(self.modo)
+        self.l_ejercicio.setText(self.ejercicio) 
+       
+        self.title_5.setText("Objetivo: Cruzar la meta con el auto")
+        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setCurrentIndex(2)		
+
+    def setImageMode_2(self):
+        self.img_4.setPixmap(QPixmap('imgs/modo_2_2.png'))
+        self.img_5.setPixmap(QPixmap('imgs/Segundo_ejercicio.png'))
+        
+        self.ejercicio = "Objetivo: Alcanzar el vaso"     
+        self.modo = "Modo de rehabilitacion asistido"
+        self.l_modo.setText(self.modo)
+        self.l_ejercicio.setText(self.ejercicio)
+        
+        self.title_5.setText("Objetivo: Alcanzar el vaso")
+        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setCurrentIndex(2)
+
+    def setImageMode_3(self):
+        self.img_4.setPixmap(QPixmap('imgs/modo_3_2.png'))  
+        self.img_5.setPixmap(QPixmap('imgs/Segundo_ejercicio.png'))
+        
+        self.ejercicio = "Objetivo: Alcanzar el vaso"   
+        self.modo = "Modo de rehabilitacion resistivo"
+        self.l_modo.setText(self.modo)
+        self.l_ejercicio.setText(self.ejercicio)
+        
+        self.title_5.setText("Objetivo: Alcanzar el vaso")
+        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setCurrentIndex(2)
+
+    def compute_rm(self):
+        #@input compute recommend radius and linear velocity
+        # get arm length
+        l_paciente = int(self.textbox_l.text()) 
+        # initial position
+        x_paciente = +500     # mm
+        y_paciente = -275     # mm
+
+        # max and min radius
+        r_max_robot = 700 # mm
+        r_min_robot = 300 # mm
+        # max and min y-position
+        y_max_robot   = y_paciente + 0.80*l_paciente	#   mm
+        y_min_robot   = y_paciente + 0.20*l_paciente	#   mm
+        # horizontal and vertical radius
+        r_1 = (y_max_robot - y_min_robot)/2 - 50
+        r_2 = (r_max_robot - r_min_robot)/2 - 50
+        self.r_rm = np.round(np.minimum(r_1, r_2) )
+        self.v_rm = np.round(2*np.pi*self.r_rm/5)
+
+        self.textbox_r_rm.setText(str(self.r_rm))
+        self.textbox_v_rm.setText(str(self.v_rm))
+        self.textbox_r.setReadOnly(False)
+        self.textbox_v.setReadOnly(False)
+
+    def eval_radius(self):
+        current_r = int(float(self.textbox_r.text()))
+
+        if current_r > self.r_rm:
+            self.textbox_r.setText(str(self.r_rm))
+	
+    def eval_linvel(self):
+        current_v = int(float(self.textbox_v.text()))
+
+        if current_v > self.v_rm:
+            self.textbox_v.setText(str(self.v_rm))
+
+
+    def empezarEjercicio(self):
+        # send patient data
+        patient_data = PatientData()
+        patient_data.arm_length = int(self.textbox_l.text())
+        patient_data.radius =int(float(self.textbox_r.text()))
+        patient_data.linvel =int(float(self.textbox_v.text()))
+        self.myguinode.publish_patient_data(patient_data)
+        
+        # send trajectory start command
+        start_command = Bool()
+        start_command.data = True
+        self.myguinode.publish_start_command(start_command)
+
+        # change tab color
+        self.tabs.setTabIcon(self.tab4_index, QIcon('imgs/verde-claro.png'))
+
+    def detenerEjercicio(self):
+        # send trajectory start command
+        start_command = Bool()
+        start_command.data = False
+        self.myguinode.publish_start_command(start_command)
+
+        # change tab color
+        self.tabs.setTabIcon(self.tab4_index, QIcon('imgs/verde-oscuro.jpg'))        
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = GraphicalUserInterface()
+    ex.show()
+    sys.exit(app.exec_())

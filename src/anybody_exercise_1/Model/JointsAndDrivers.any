@@ -1,0 +1,215 @@
+AnyFolder Joints = 
+{
+  
+  // Wheel and Right Hand
+  
+  AnySphericalJoint RightHandRest = {
+    AnySeg &Pam = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger3MetaRef;
+    AnyRefNode &Ground = Main.Model.Environment.Wheel.Handle;
+  }; 
+  
+};
+
+AnyFolder Drivers = 
+{
+  // Constraint Pelvis to Global Reference [6 DoF]
+  AnyKinEqSimpleDriver PelvisGroundDriver ={
+    AnyKinLinear lin ={
+      AnyFixedRefFrame &ref1 = Main.Model.Environment.GlobalRef;
+      AnySeg &ref2 = Main.HumanModel.BodyModel.Trunk.SegmentsLumbar.PelvisSeg;
+    };
+    AnyKinRotational rot ={
+      AnyFixedRefFrame &ref1 = Main.Model.Environment.GlobalRef;
+      AnySeg &ref2 = Main.HumanModel.BodyModel.Trunk.SegmentsLumbar.PelvisSeg;
+      Type=RotAxesAngles;
+    };
+    DriverPos = {0, 0, 0, 0, 0, 0};
+    DriverVel = {0, 0, 0, 0, 0, 0};
+    Reaction.Type={On,On,On,On,On,On};
+    
+  };
+  // Constraint orientation between Pelvis and Thorax [3 DoF]
+  AnyKinEqSimpleDriver PelvisThoraxDriver = {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Trunk.PelvisThoraxExtension;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Interface.Trunk.PelvisThoraxLateralBending;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Interface.Trunk.PelvisThoraxRotation;
+
+    DriverPos = pi/180*{0,0,0};
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type = {Off, Off, Off};
+  };
+ 
+  // Constraint orientation between Thorax and Skull [3 DoF]
+  AnyKinEqSimpleDriver SkullThoraxDriver =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Trunk.SkullThoraxFlexion;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Interface.Trunk.SkullThoraxLateralBending;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Interface.Trunk.SkullThoraxRotation;
+
+    DriverPos = pi/180*{0,0,0};
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type = {Off, Off, Off};  
+  };  
+  
+   
+  // Constraint pose Rigth Arm: Sterno Clavicular [2 DoF]
+  AnyKinEqSimpleDriver SCDriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Right.SternoClavicularProtraction;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Interface.Right.SternoClavicularElevation;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.SternoClavicularProtraction, Main.HumanModel.Mannequin.Posture.Right.SternoClavicularElevation};
+    DriverVel = pi/180*{Main.HumanModel.Mannequin.PostureVel.Right.SternoClavicularProtraction, Main.HumanModel.Mannequin.PostureVel.Right.SternoClavicularElevation};
+    Reaction.Type={Off,Off};
+  }; 
+  /*
+  // Constraint pose Rigth Shoulder: Glenohumeral joint [2 Dof]
+  AnyKinEqSimpleDriver GlenohumeralDriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Right.GlenohumeralAbduction;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.GlenohumeralAbduction};
+    DriverVel = pi/180*{Main.HumanModel.Mannequin.PostureVel.Right.GlenohumeralAbduction};
+    Reaction.Type={Off};
+  };   */
+  
+  // Constraint pose: Right Elbow 
+  AnyKinEqSimpleDriver ElbowDriverRight =
+  {
+    //AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Right.ElbowFlexion;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Interface.Right.ElbowPronation;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.ElbowPronation};
+    DriverVel = pi/180*{Main.HumanModel.Mannequin.PostureVel.Right.ElbowPronation};
+    Reaction.Type={Off};
+
+    //DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.WristFlexion, Main.HumanModel.Mannequin.Posture.Right.WristAbduction};
+    //DriverVel = pi/180*{Main.HumanModel.Mannequin.PostureVel.Right.WristFlexion,Main.HumanModel.Mannequin.PostureVel.Right.WristAbduction};
+    //Reaction.Type={Off,Off};
+  };  
+   
+  // Constraint Y axis : Elbow joint
+  AnyKinEqSimpleDriver ElbowYDriver =
+  {
+    AnyKinLinear lin =
+    {
+      AnyRefFrame& ref0 = Main.Model.Environment.GlobalRef;
+      AnyRefFrame& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Ulna.fe;
+      Ref = 0;
+    };
+    MeasureOrganizer = {1};
+    DriverPos = {Main.WheelParameters.Hub_y} + 0.05;
+    DriverVel = {0};
+    Reaction.Type = {Off};
+   };  
+  
+  // Constraint pose Wrist Rigth
+  AnyKinEqSimpleDriver WristDriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Interface.Right.WristFlexion;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Interface.Right.WristAbduction;
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.WristFlexion, Main.HumanModel.Mannequin.Posture.Right.WristAbduction};
+    DriverVel = pi/180*{Main.HumanModel.Mannequin.PostureVel.Right.WristFlexion,Main.HumanModel.Mannequin.PostureVel.Right.WristAbduction};
+    Reaction.Type={Off,Off};
+  };  
+  /*
+  // Constraint Y axis : Hand
+  AnyKinEqSimpleDriver HandYDriver =
+  {
+    AnyKinLinear lin =
+    {
+      AnyRefFrame& ref0 = Main.Model.Environment.GlobalRef;
+      AnyRefFrame& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.HandRef;
+      Ref = 0;
+    };
+    MeasureOrganizer = {1};
+    DriverPos = {Main.WheelParameters.Hub_y} + 0.05;
+    DriverVel = {0};
+    Reaction.Type = {Off};
+   };     */
+  // Constraint pose: Rigth Finger 1
+  AnyKinEqSimpleDriver Finger1DriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger1.Jnt.CMCFlexion;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger1.Jnt.CMCAbduction;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger1.Jnt.MCPFlexion;
+    AnyKinMeasure& ref3 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger1.Jnt.MCPAbduction;
+    AnyKinMeasure& ref4 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger1.Jnt.DIP;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.Finger1.CMCDeviation, 
+                        Main.HumanModel.Mannequin.Posture.Right.Finger1.CMCFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger1.MCPFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger1.MCPDeviation,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger1.DIPFlexion};
+                      
+    DriverVel = pi/180*{0,0,0,0,0};
+    Reaction.Type={Off,Off,Off,Off,Off};
+  };   
+  // Constraint pose: Rigth Finger 2
+  AnyKinEqSimpleDriver Finger2DriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger2.Jnt.MCP;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger2.Jnt.PIP;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger2.Jnt.DIP;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.Finger2.MCPFlexion, 
+                        Main.HumanModel.Mannequin.Posture.Right.Finger2.PIPFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger2.DIPFlexion};
+                      
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type={Off,Off,Off};
+  };
+  // Constraint pose: Rigth Finger 3
+  AnyKinEqSimpleDriver Finger3DriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger3.Jnt.MCP;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger3.Jnt.PIP;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger3.Jnt.DIP;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.Finger3.MCPFlexion, 
+                        Main.HumanModel.Mannequin.Posture.Right.Finger3.PIPFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger3.DIPFlexion};
+                      
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type={Off,Off,Off};
+  };
+  // Constraint pose: Rigth Finger 4
+  AnyKinEqSimpleDriver Finger4DriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger4.Jnt.MCP;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger4.Jnt.PIP;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger4.Jnt.DIP;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.Finger4.MCPFlexion, 
+                        Main.HumanModel.Mannequin.Posture.Right.Finger4.PIPFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger4.DIPFlexion};
+                      
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type={Off,Off,Off};
+  };  
+  // Constraint pose: Rigth Finger 5
+  AnyKinEqSimpleDriver Finger5DriverRight =
+  {
+    AnyKinMeasure& ref0 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger5.Jnt.MCP;
+    AnyKinMeasure& ref1 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger5.Jnt.PIP;
+    AnyKinMeasure& ref2 = Main.HumanModel.BodyModel.Right.ShoulderArm.Seg.Hand.Finger5.Jnt.DIP;
+    
+    DriverPos = pi/180*{Main.HumanModel.Mannequin.Posture.Right.Finger5.MCPFlexion, 
+                        Main.HumanModel.Mannequin.Posture.Right.Finger5.PIPFlexion,
+                        Main.HumanModel.Mannequin.Posture.Right.Finger5.DIPFlexion};
+                      
+    DriverVel = pi/180*{0,0,0};
+    Reaction.Type={Off,Off,Off};
+  };  
+  
+  
+  /*AnyKinEqSimpleDriver FE_Driver = 
+  {
+    DriverPos = {0};
+    DriverVel = {0.2};
+    AnyKinMeasure &FE = Main.HumanModel.BodyModel.Interface.Right.ElbowFlexion;
+  };*/
+
+  
+};
+

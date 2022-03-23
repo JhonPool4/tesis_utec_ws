@@ -1,0 +1,10 @@
+//This is a place holder for the modeling of the environment.
+AnyFolder Environment = 
+{
+  // Global Reference
+  #include "GlobalReference.any"
+  
+  // Segments
+  #include "Segments.any"
+
+};

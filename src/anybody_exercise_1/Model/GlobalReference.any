@@ -1,0 +1,32 @@
+
+// global Ref
+    AnyFixedRefFrame GlobalRef = {
+      AnyDrawRefFrame DrwRef = {
+        ScaleXYZ=1*{0.1,0.1,0.1};
+        RGB ={0,0,1};
+      };
+      
+      AnyRefNode RightHand ={
+        sRel = Main.WheelParameters.Hub_xyz;//{0.32,0.3,0.3};      
+      };
+      AnyRefNode RefNode = {
+        sRel = Main.WheelParameters.Hub_xyz;
+      };
+      AnyRefNode MesaNode = {
+        sRel = Main.WheelParameters.Hub_xyz-{0.0, 5, -15}/100;
+        AnyDrawSTL draw = {
+          FileName = "Mesa.stl";
+          ScaleXYZ = 0.01*{1,1,0.6};
+          RGB = {128, 126, 26}/255;
+        };
+
+      };
+      AnyRefNode MesaAxisNode = {
+        sRel = Main.WheelParameters.Hub_xyz-{0.0, 0.0, 0.0}/100;
+        AnyDrawRefFrame DrwRef = {
+          ScaleXYZ=0.5*{0.1,0.1,0.1};
+          RGB ={0,1,1};
+        };
+      };
+    };
+    

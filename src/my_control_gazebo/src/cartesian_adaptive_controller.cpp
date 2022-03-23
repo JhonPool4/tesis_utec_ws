@@ -174,7 +174,7 @@ namespace effort_controllers_ns{
 				// Subscribers
 				_sub_pose_command = n.subscribe<my_control_gazebo::Pose>("pose_command", 1, &CartesianAdaptiveController::poseCommandCB, this);
 				// Publishers
-				_pub_start_command = n.advertise<std_msgs::Bool>("start_command", 1);
+				_pub_start_command = n.advertise<std_msgs::Bool>("gazebo_start_command", 1);
 				//_pub_current_pose = n.advertise<my_control_gazebo::Pose>("measured_pose", 1);
 				
                 // load urdf model

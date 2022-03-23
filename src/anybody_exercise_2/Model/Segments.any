@@ -1,0 +1,61 @@
+// Segments
+AnySeg Wheel ={
+  Mass = 1.0;
+  Jii = {0.1,0.1,0.1}*0.01; 
+  AnyRefNode HandleBotton={
+    sRel={0.0, 0.0, 0.0}; 
+    AnyDrawNode HandleBottonNode={
+      ScaleXYZ = 0.01*{1, 1, 1};
+    };
+  };    
+  AnyRefNode Handle={
+    sRel= Main.Model.Environment.Wheel.HandleBotton.sRel + {0.00, 0.05, 0.0}; 
+    AnyDrawNode HandleNode={
+      ScaleXYZ = 0.01*{1, 1, 1};
+    };
+  };  
+  AnyRefNode HandleTop={
+    sRel= Main.Model.Environment.Wheel.HandleBotton.sRel + 2*{0.00, 0.05, 0.0};  
+    AnyDrawNode HandleTopNode={
+      ScaleXYZ = 0.01*{1, 1, 1};
+    };
+  }; 
+  AnyKinPLine Line = {
+    AnyRefNode &Node0 = Main.Model.Environment.GlobalRef.RefNode;
+    AnyRefNode &node1 = Main.Model.Environment.Wheel.HandleBotton;
+    AnyRefNode &node2 = Main.Model.Environment.Wheel.Handle;
+    AnyRefNode &node3 = Main.Model.Environment.Wheel.HandleTop;
+    AnyDrawPLine drw = {
+      Thickness = 0.005;
+      RGB = {1.0, 0.0, 0.0};
+    };
+  };
+}; // End Wheel Segment
+
+
+  // Wheel and ground joint: Axis X
+  AnyPrismaticJoint WheelJointX = 
+  {
+    Axis = x;
+    AnyRefFrame &ref0 = Main.Model.Environment.GlobalRef.RefNode;
+    AnyRefFrame &ref1 = Main.Model.Environment.Wheel.HandleBotton;
+  };
+  
+    // Move Wheel  X axis
+  AnyKinEqSimpleDriver WheelXDriver = 
+  {
+    AnyPrismaticJoint &WheelJoint = Main.Model.Environment.WheelJointX;
+    DriverPos = {Main.WheelParameters.Ang_0};
+    DriverVel = {Main.WheelParameters.Vel};
+    Reaction.Type = {Off};
+  };  
+  
+    // Force
+  AnyForce Impedance = {
+    AnyPrismaticJoint &Wheel = Main.Model.Environment.WheelJointX;
+    F = -200.0* Main.Model.Environment.WheelJointX.Pos - 30* Main.Model.Environment.WheelJointX.Vel;
+  };  
+
+
+
+

@@ -1,0 +1,56 @@
+    // Save data
+    // Triceps
+    AnyOutputFile Output_tricps_LH_1 = 
+    {
+      FileName = "triceps_LH_1_data.txt";
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_LH_1.Fm"};
+    };
+    AnyOutputFile Output_tricps_LH_2 = 
+    {
+      FileName = "triceps_LH_2_data.txt";
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_LH_2.Fm"};
+    };
+    AnyOutputFile Output_tricps_ME_1 = 
+    {
+      FileName = "triceps_ME_1_data.txt";    
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_ME_1.Fm"};
+    };
+    AnyOutputFile Output_tricps_ME_2 = 
+    {
+      FileName = "triceps_ME_2_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_ME_2.Fm"};
+    };
+    AnyOutputFile Output_tricps_LA_1 = 
+    {
+      FileName = "triceps_LA_1_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_LA_1.Fm"};
+    };
+    AnyOutputFile Output_tricps_LA_2 = 
+    {
+      FileName = "triceps_LA_2_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Triceps_LA_2.Fm"};
+    };
+    
+    // Brachialis
+    AnyOutputFile Output_brachialis_1 = 
+    {
+      FileName = "brachialis_1_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Brachialis_1.Fm"};
+    };
+    AnyOutputFile Output_brachialis_2 = 
+    {
+      FileName = "brachialis_2_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.Brachialis_2.Fm"};
+    };
+    
+    // Biceps
+    AnyOutputFile Output_biceps_brachii_caput_breve = 
+    {
+      FileName = "biceps_brachii_caput_breve_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.biceps_brachii_caput_breve.Fm"};
+    };
+    AnyOutputFile Output_biceps_brachii_caput_longum = 
+    {
+      FileName = "biceps_brachii_caput_longum_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Mus.biceps_brachii_caput_longum.Fm"};
+    };

@@ -1,0 +1,20 @@
+AnyFolder WheelParameters = {
+  AnyVar Hub_y = 0.35;
+  AnyVar Hub_x = 0.45;
+  AnyVar Hub_z = 0.00;
+  AnyVec3 Hub_xyz  = {Hub_x,Hub_y, Hub_z}; // Center of the wheel [m]
+  AnyVar Rad   = 0.100;                 // Radius of the wheel [m]
+  AnyVar T     = 2.0;                  // Time for line [seg]
+  // Movement of the wheel
+  AnyVar Rot_y = 0*45*pi/180;
+  AnyVar Ang_0 = 0.0; //100
+  AnyVar Omega = 30;                                               // Angular Velocity [deg/s]
+  AnyVar Vel   = -Main.WheelParameters.Rad/Main.WheelParameters.T;  // Linear Velocity [m/s]
+  AnyVar M = -8.0;                                                 // Wheel moment
+};
+
+AnyFolder LeftHand = {
+  AnyVec3 HandRest = {0.2, 0.0, -0.25};  // Rest for the left hand
+};
+
+

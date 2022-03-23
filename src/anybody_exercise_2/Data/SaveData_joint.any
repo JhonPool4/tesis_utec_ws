@@ -1,0 +1,7 @@
+      
+    AnyOutputFile Output_FE = 
+    {
+      FileName = "FE_data.txt"; 
+      Search = {"Main.HumanModel.BodyModel.Right.ShoulderArm.Jnt.FE.Pos"};
+    };    
+    

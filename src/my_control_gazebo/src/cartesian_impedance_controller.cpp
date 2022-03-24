@@ -92,7 +92,7 @@ namespace effort_controllers_ns{
 			int _p_rate = 100;
 			bool _print_data;
 			// start flag
-			bool _send_start_command = true;
+			bool _home_position = false;
 			// current joint states
 			my_control_gazebo::Pose _pose;
 
@@ -117,6 +117,9 @@ namespace effort_controllers_ns{
 			Vector_d_6x1 dx_e; // error end-effector dpose
 			Vector_d_6x1 ddx_e; // error end-effector ddpose
 
+			Vector_d_6x1 _pose0; // initial pose
+			Vector_d_6x1 _q0; // initial joint configuration
+
 			// control terms
 			Vector_d_6x1 F;
 			Vector_d_6x1 u;			
@@ -134,13 +137,6 @@ namespace effort_controllers_ns{
 			bool init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n)
 			{
 				ROS_INFO_STREAM("============================");
-				// print in screen
-				if(!n.getParam("print_data", _print_data))
-				{
-					ROS_ERROR_STREAM("Failed to getParam '" << "print_data" << "' (namespace: " << n.getNamespace() << ").");
-					return false;					
-				}
-
                 // Read joints of robot
 				std::string param_name = "joints";
 				if(!n.getParam(param_name, _joint_names))
@@ -167,8 +163,28 @@ namespace effort_controllers_ns{
 						ROS_ERROR_STREAM("Exception thrown: " << e.what());
 						return false;
 					}
+	
 				}
-				
+
+				// print in screen
+				n.getParam("print_data", _print_data);
+				ROS_INFO_STREAM("Success to getParam"<<"print_data: "<<_print_data);
+
+				// get initial pose
+				std::vector< std::string > _pose_names = {"x","y","z","roll","pitch","yaw"};
+				for(int i=0; i<6; i++)
+				{
+					n.getParam("home_configuration/pose/"+_pose_names[i], _pose0[i]);	
+					ROS_INFO_STREAM("Success to get home/pose/" << _pose_names[i]<<": "<< _pose0[i]);							
+				}
+
+				// get initial joint configuration
+				for(int i=0; i<6; i++)
+				{
+					n.getParam("home_configuration/joints/"+_joint_names[i], _q0[i]);	
+					ROS_INFO_STREAM("Success to get home/joint/" << _joint_names[i]<<": "<< _q0[i]);							
+				}			
+
 				// resize command buffer with non real time communication
 				_pose_command.writeFromNonRT(std::vector<double>(6, 0.0));
 				_dpose_command.writeFromNonRT(std::vector<double>(6, 0.0));
@@ -222,22 +238,25 @@ namespace effort_controllers_ns{
 
 			void starting(const ros::Time& time)
 			{
-				// control values according to theraban brand
-				_kp = Matrix_d_6x6::Identity()*200;
-				_kd = Matrix_d_6x6::Identity()*30;
+				// control values for articular control
+				_kp = Matrix_d_6x6::Identity()*9;
+				_kd = Matrix_d_6x6::Identity()*2*sqrt(9);
 
 				// To recieve angular position and velocity message
 				std::vector<double> _desired_pose(6,0.0);
 				std::vector<double> _desired_dpose(6,0.0);
 				std::vector<double> _desired_ddpose(6,0.0);
 
-				// Set desired pose
-				_desired_pose[0] = 0.5;
-				_desired_pose[1] = 0.0;
-				_desired_pose[2] = 0.0;
-				_desired_pose[3] = M_PI/4;
-				_desired_pose[4] = 0.0;
-				_desired_pose[5] = 0.0;
+				for (int i=0; i<6; i++)
+				{
+					_desired_pose[i]=_pose0[i];
+				}
+				//_desired_pose[0] = 0.5;
+				//_desired_pose[1] = 0.0;
+				//_desired_pose[2] = 0.0;
+				//_desired_pose[3] = M_PI/4;
+				//_desired_pose[4] = 0.0;
+				//_desired_pose[5] = 0.0;
 				// Send desired pose
 				_pose_command.initRT(_desired_pose);			  						
 				_dpose_command.initRT(_desired_dpose);
@@ -302,7 +321,6 @@ namespace effort_controllers_ns{
 
 				ddpw_des.block<3,1>(0,0) = ddx_des.block<3,1>(0,0);
 				ddpw_des.block<3,1>(3,0) = dw_des;
-				//ddpw_des.Zero();
 				
 				// ======================================================
 				//   Third stage: End-Effector Pose error         
@@ -328,9 +346,16 @@ namespace effort_controllers_ns{
 				// ======================================================
 				//   Fifth stage: Compute control signal      
 				// ======================================================
-				F = Mx*(ddpw_des + _kp*x_e + _kd*dx_e) + bx;
-				u = eval_control_limits(J.transpose()*F);
-				//u = J.transpose()*F;
+				if (_home_position)
+				{
+					F = Mx*(ddpw_des + _kp*x_e + _kd*dx_e) + bx;
+					u = eval_control_limits(J.transpose()*F);
+				}
+				else
+				{
+					// articular control until achieve home_position
+					u = M*(_kp*(_q0-q) - _kd*dq) + b;
+				}
 
 				// send control signal
 				for (int i = 0; i < 6; ++i)
@@ -355,7 +380,7 @@ namespace effort_controllers_ns{
 						//std::cout<<"\nR_med: "<<R_med<<std::endl;
 						//std::cout<<"\nx_des: "<<x_des.transpose()<<std::endl;
 						//std::cout<<"\nR_des: "<<R_des<<std::endl;	
-						std::cout<<"\nsend_data: "<<_send_start_command<<std::endl;	
+						std::cout<<"\nsend_data: "<<_home_position<<std::endl;	
 						std::cout<<"\nx_e: "<<x_e.transpose()<<std::endl;
 						std::cout<<"\ndx_e: "<<dx_e.transpose()<<std::endl;
 						std::cout<<"\nnorm_pos: "<<100*x_e.block<3,1>(0,0).norm()<<" cm"<<std::endl;
@@ -369,12 +394,17 @@ namespace effort_controllers_ns{
 					}
 				}
 
-				if ((x_e.block<3,1>(0,0).norm()<0.008) && _send_start_command)
+				if ( ( (180/M_PI)*(_q0-q).norm()<=5) && !_home_position)
 				{	
 					std::cout<<"/n/n============================="<<std::endl;
 					std::cout<<"Pose error achieved ..."<<std::endl;
+					std::cout<<"Loading control values according to Theraband ..."<<std::endl;
+					// control values according to theraban brand
+					_kp = Matrix_d_6x6::Identity()*200;
+					_kd = Matrix_d_6x6::Identity()*30;
 					std::cout<<"Sending start signal to recieve trajectory ..." <<std::endl;
-					_send_start_command=false;
+
+					_home_position=true;
 					std_msgs::Bool start_signal;
 					start_signal.data = true;
 					_pub_start_command.publish(start_signal);

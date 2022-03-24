@@ -18,12 +18,6 @@
 	<node name="spawn_gazebo_ur5_robot" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model ur5 
 		-z 0.5
 		-x 0.0
-		-y 0.0
-		-J shoulder_pan_joint   -0.187932		
-		-J shoulder_lift_joint 	-0.922357
-		-J elbow_joint			 1.99554
-		-J wrist_1_joint 		-2.62668
-		-J wrist_2_joint 		-1.57547	
-		-J wrist_3_joint 		-0.186816	
+		-y 0.0	
 		" respawn="false" output="screen" /> 
 </launch>

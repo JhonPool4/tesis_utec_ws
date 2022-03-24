@@ -13,6 +13,7 @@ import pandas as pd 					# Save data
 import numpy as np
 from sensor_msgs.msg import JointState 	# to read angular position and velocity
 from std_msgs.msg import Bool
+from graphical_user_interface.msg import PatientData # patient data
 from my_control_gazebo.msg import Pose # to send pose, dpose and ddpose to robot
 #from labpythonlib.lab_functions import *
 
@@ -21,21 +22,38 @@ class TrajectoryPublisher():
     def __init__(self):
         # create node
         rospy.init_node("node")
+        # subscriber: recieve start signal from gazebo
+        self.sub_gazebo_start_command = rospy.Subscriber('cartesian_impedance_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
+        # subscriber: recieve start signal from gui
+        self.sub_gui_start_command = rospy.Subscriber('gui_start_command', Bool, self.gui_start_cb)
+        # subscriber: recieve patient data
+        self.sub_patient_data = rospy.Subscriber('patient_data', PatientData, self.patient_data_cb)
         # pubisher: end-effector pose         
-        self.pub_pose = rospy.Publisher('cartesian_adaptive_controller/pose_command', Pose, queue_size=1000)
-        # subscriber: recive start signal
-        self.sub_start_command = rospy.Subscriber('cartesian_adaptive_controller/start_command', Bool, self.start_cb)
+        self.pub_pose = rospy.Publisher('cartesian_impedance_controller/pose_command', Pose, queue_size=1000)
         # flag to indicates if robot is in home position
         self.home_position = False
+        # flag to enable the exercise start
+        self.send_trajectory = False # corregir
+        # patient data (object)
+        self.patient = PatientData()
 
-    def start_cb(self, msg):
+    def gazebo_start_cb(self, msg):
         self.home_position= msg.data
+    
+    def gui_start_cb(self, msg):
+        self.send_trajectory= msg.data
+
+    def  patient_data_cb(self, msg):
+        self.patient.arm_length = msg.arm_length
+        self.patient.radius = msg.radius
+        self.patient.linvel = msg.linvel      
 
     def publish_pose(self, msg):
         self.pub_pose.publish(msg)
 
+
 def main():
-    # object to manage trajectory sending
+    # object to manage trajectory communication
     trajPub = TrajectoryPublisher()
 
     # object(message)
@@ -46,10 +64,13 @@ def main():
     dt = 1/freq                    # 33  [ms]
     rate = rospy.Rate(freq)        # 100 [Hz]
 
-    # simulation    
+    # simulation time  
     t = 0
+    traj_radius=0.05 # default value
+    traj_length=0.550 # default value
+    traj_linvel=0.03 # default value
     while not rospy.is_shutdown():
-        x, dx, ddx = circular_trayectory_generator(t,freq_xyz=0.1, radius=0.05, z_amp=0)
+        x, dx, ddx = star_trayectory_generator(t,arm_length=traj_length, linvel=traj_linvel,radius=traj_radius)
 
         w = rpy2angularVel(x[3:6], dx[3:6])
         dw = rpy2angularAccel(x[3:6], dx[3:6], ddx[3:6])
@@ -77,47 +98,72 @@ def main():
 
         trajPub.publish_pose(pose)
 
-        # update time
-        if trajPub.home_position:
+        if trajPub.home_position and trajPub.send_trajectory:
+            # create a trajectory according to the patient capababilities 
+            traj_radius = (1/1000)*trajPub.patient.radius # from mm to m
+            traj_linvel = (1/1000)*trajPub.patient.linvel # from mm to m
+            traj_length = (1/1000)*trajPub.patient.arm_length # from mm to m
+            # update time
             t=t+dt
 
         # Wait for the next iteration
         rate.sleep()    
 
-def circular_trayectory_generator(t,radius=0.05, z_amp=0.02, rpy_amp=np.zeros(3), freq_xyz=0.1, freq_rpy=0.1):
+def star_trayectory_generator(t, linvel, arm_length, radius=0.05, rpy_amp=np.zeros(3), freq_rpy=0.1):
     """
-    @info generate points of a circular trayectory.
-
+    @info: generate points of star trayectory.
     @inputs:
     -------
-        - t : simulation time [s]
-        - radius: radius of circular trajectory on xy-plane [m]
-        - z_amp: amplitude of sinusoidal trajectory on z-plane [m]
-        - freq: frequency [hz]
-
-    Outpus:
-    -------
-        - pose: end-effector position (xyz) and orientation (rpy)   
-        - dpose: end-effector velocity (xyz) and dorientation (rpy)        
+        - t:        simulation time [s]
+        - linvel:   linear velocity [m/s]
+        - arm_length: length of patient's arm [m]
+        - radius: radius of circular workspace [m]
+    Outputs:
+    --------
+        - pos: position xyz
+        - vel: velocity xyz   
     """
 
-    # Parameters of circular trayetory     
-    w_xyz = 2*np.pi*freq_xyz   # angular velocity [rad/s]
+    # parameters of circular trayetory
     w_rpy = 2*np.pi*freq_rpy   # angular velocity [rad/s]
-    pos0 = np.array([0.5, 0.0, 0.0]) # initial states
+    T = 0.5*arm_length/linvel     # period
+    pos0 = np.array([0.5, -0.275+0.5*arm_length, 0.0]) # initial states
+    #pos0 = np.array([0.5, 0.0, 0.0])
 
-    # Cartesian pos, vel, accel
-    pos = np.array([pos0[0]+radius*np.cos(w_xyz*(t)), pos0[1]+radius*np.sin(w_xyz*(t)), pos0[2]+z_amp*np.sin(w_xyz*t)]) 
-    vel = np.array([radius*(-w_xyz)*np.sin(w_xyz*(t)), radius*(+w_xyz)*np.cos(w_xyz*(t)), z_amp*w_xyz*np.cos(w_xyz*t)])
-    acc = np.array([radius*(-w_xyz*w_xyz)*np.cos(w_xyz*(t)), radius*(-w_xyz*w_xyz)*np.sin(w_xyz*(t)), z_amp*(-w_xyz*w_xyz)*np.sin(w_xyz*t)])
+    # position of the coup
+    index     = int(t/(2*T)) + 1
+    vueltas = int(t/(2*T*8))
+    aspas   = index - 1 - vueltas*8
+    norm_time  = t - (index-1)*(2*T)
+
+    ang = (aspas)*2*np.pi/8
+
+    # desired position
+    pos_des = pos0 + radius*np.array([np.cos(ang-np.pi/2),  np.sin(ang-np.pi/2), 0.0 ])
+    # generate positions form intial position (pos0) to desired position (pos_des)
+    if (norm_time>=0) & (norm_time<(T)):
+        # llevar vaso
+        modo = "alcanzar"
+        pos = pos0 + (pos_des- pos0)*(norm_time/T)
+        vel = (pos_des- pos0)*(1/T)
+        acc = np.zeros(3)
+        
+
+    elif (norm_time>=(T)) & (norm_time<=(2*T)):
+        # alcanzar vaso
+        modo = "regresar"
+        pos = pos_des + (pos0-pos_des)*((norm_time-T)/T)
+        vel = (pos0-pos_des)*(1/T)         
+        acc = np.zeros(3)
+
     # rpy orientation
     R  = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
     rpy = rot2rpy(R) + rpy_amp*np.sin(w_rpy*t)
     drpy = rpy_amp*w_rpy*np.cos(w_rpy*t)
     ddrpy = rpy_amp*(-w_rpy*w_rpy)*np.sin(w_rpy*t)
     
-    # return end-effector pose and its time-derivative
-    return np.concatenate((pos, rpy), axis=0), np.concatenate((vel, drpy), axis=0), np.concatenate((acc, ddrpy), axis=0)
+    return np.concatenate((pos, rpy)), np.concatenate((vel,drpy)), np.concatenate((acc, ddrpy))
+
 
 def rot2rpy(R):
     """

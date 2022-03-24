@@ -7,6 +7,7 @@
 
 # general libraries
 import sys
+import os
 import numpy as np # math library
 # ros libraries and msgs
 import rospy # ros and python library
@@ -21,6 +22,8 @@ from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton
 from PyQt5.QtGui 	 import QIcon, QFont, QPixmap
 from PyQt5.QtCore    import QSize, Qt
 
+dir_name = os.path.dirname(__file__)
+
 class GuiNode():
     def __init__(self):
         # create node
@@ -30,9 +33,9 @@ class GuiNode():
         self.sub_start_command_2 = rospy.Subscriber('cartesian_impedance_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
 
         # pubisher: send start command to trajectory generator  
-        self.pub_start_command = rospy.Publisher('trajectory_start_command', Bool, queue_size=10)
+        self.pub_start_command = rospy.Publisher('gui_start_command', Bool, queue_size=10)
         # publisher: send patient data
-        self.pub_patient_data = rospy.Publisher('patient_data', PatientData, queue_size=20)
+        self.pub_patient_data = rospy.Publisher('patient_data', PatientData, queue_size=50)
 
         # flags
         self.home_position = False # indicates if robot is in the initial position
@@ -98,10 +101,10 @@ class MyTableWidget(QWidget):
         self.tabs.setStyleSheet("background-color: white;")
 
         # Add Tabs
-        self.tab1_index = self.tabs.addTab(self.tab1, QIcon('imgs/verde-oscuro.jpg'), "Etapa 1")
-        self.tab2_index = self.tabs.addTab(self.tab2, QIcon('imgs/verde-oscuro.jpg'), "Etapa 2")
-        self.tab3_index = self.tabs.addTab(self.tab3, QIcon('imgs/verde-oscuro.jpg'), "Etapa 3")
-        self.tab4_index = self.tabs.addTab(self.tab4, QIcon('imgs/verde-oscuro.jpg'), "Etapa 4")
+        self.tab1_index = self.tabs.addTab(self.tab1, QIcon(os.path.join(dir_name,'imgs/verde-oscuro.jpg')), "Etapa 1")
+        self.tab2_index = self.tabs.addTab(self.tab2, QIcon(os.path.join(dir_name,'imgs/verde-oscuro.jpg')), "Etapa 2")
+        self.tab3_index = self.tabs.addTab(self.tab3, QIcon(os.path.join(dir_name,'imgs/verde-oscuro.jpg')), "Etapa 3")
+        self.tab4_index = self.tabs.addTab(self.tab4, QIcon(os.path.join(dir_name,'imgs/verde-oscuro.jpg')), "Etapa 4")
 
         # Set Main Box layout
         self.layout.addWidget(self.tabs)        
@@ -130,7 +133,7 @@ class MyTableWidget(QWidget):
         self.title_2.setStyleSheet("color: black")
         #self.title_2.setStyleSheet("border: 4px solid black")
 
-        self.img_0.setPixmap(QPixmap('imgs/Rehabilitation_UR5_2.jpg'))        
+        self.img_0.setPixmap(QPixmap(os.path.join(dir_name,'imgs/Rehabilitation_UR5_2.jpg')))        
         #self.img_1.setStyleSheet("border: 4px solid black")
 
         self.pushbutton = QPushButton('Empezar \n configuracion')
@@ -169,13 +172,13 @@ class MyTableWidget(QWidget):
         self.label_modo_3.setStyleSheet("color: orange")
         #self.label_modo_3.setStyleSheet("border: 4px solid black")
         
-        self.img_1.setPixmap(QPixmap('imgs/modo_1_2.png'))
+        self.img_1.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_1_2.png')))
         #self.img_1.setStyleSheet("border: 4px solid black")
 
-        self.img_2.setPixmap(QPixmap('imgs/modo_2_2.png'))        
+        self.img_2.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_2_2.png')))        
         #self.img_2.setStyleSheet("border: 4px solid black")
 
-        self.img_3.setPixmap(QPixmap('imgs/modo_3_2.png'))        
+        self.img_3.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_3_2.png')))        
         #self.img_3.setStyleSheet("border: 4px solid black")
 
         self.pb_1 = QPushButton('Seleccionar')
@@ -324,18 +327,18 @@ class MyTableWidget(QWidget):
         self.setLayout(self.layout)
 
     def goToTab2(self):
-        self.tabs.setTabIcon(self.tab1_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setTabIcon(self.tab1_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')))
         self.tabs.setCurrentIndex(1)               
 
 
     def goToTab4(self):
         if int(float(self.textbox_v.text())) > 5 and int(float(self.textbox_r.text()))> 10:		
-            self.tabs.setTabIcon(self.tab3_index, QIcon('imgs/verde-claro.png'))
+            self.tabs.setTabIcon(self.tab3_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')))
             self.tabs.setCurrentIndex(3)
 
     def setImageMode_1(self):
-        self.img_4.setPixmap(QPixmap('imgs/modo_1_2.png'))   
-        self.img_5.setPixmap(QPixmap('imgs/Primer_ejercicio.png'))
+        self.img_4.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_1_2.png')))   
+        self.img_5.setPixmap(QPixmap(os.path.join(dir_name,'imgs/Primer_ejercicio.png')))
         
         self.ejercicio = "Objetivo: Seguir el vaso"
         self.modo = "Modo de rehabilitacion pasivo" 
@@ -343,12 +346,12 @@ class MyTableWidget(QWidget):
         self.l_ejercicio.setText(self.ejercicio) 
        
         self.title_5.setText("Objetivo: Cruzar la meta con el auto")
-        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setTabIcon(self.tab2_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')))
         self.tabs.setCurrentIndex(2)		
 
     def setImageMode_2(self):
-        self.img_4.setPixmap(QPixmap('imgs/modo_2_2.png'))
-        self.img_5.setPixmap(QPixmap('imgs/Segundo_ejercicio.png'))
+        self.img_4.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_2_2.png')))
+        self.img_5.setPixmap(QPixmap(os.path.join(dir_name,'imgs/Segundo_ejercicio.png')))
         
         self.ejercicio = "Objetivo: Alcanzar el vaso"     
         self.modo = "Modo de rehabilitacion asistido"
@@ -356,12 +359,12 @@ class MyTableWidget(QWidget):
         self.l_ejercicio.setText(self.ejercicio)
         
         self.title_5.setText("Objetivo: Alcanzar el vaso")
-        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setTabIcon(self.tab2_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')))
         self.tabs.setCurrentIndex(2)
 
     def setImageMode_3(self):
-        self.img_4.setPixmap(QPixmap('imgs/modo_3_2.png'))  
-        self.img_5.setPixmap(QPixmap('imgs/Segundo_ejercicio.png'))
+        self.img_4.setPixmap(QPixmap(os.path.join(dir_name,'imgs/modo_3_2.png')) )
+        self.img_5.setPixmap(QPixmap(os.path.join(dir_name,'imgs/Segundo_ejercicio.png')) )
         
         self.ejercicio = "Objetivo: Alcanzar el vaso"   
         self.modo = "Modo de rehabilitacion resistivo"
@@ -369,7 +372,7 @@ class MyTableWidget(QWidget):
         self.l_ejercicio.setText(self.ejercicio)
         
         self.title_5.setText("Objetivo: Alcanzar el vaso")
-        self.tabs.setTabIcon(self.tab2_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setTabIcon(self.tab2_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')) )
         self.tabs.setCurrentIndex(2)
 
     def compute_rm(self):
@@ -424,7 +427,7 @@ class MyTableWidget(QWidget):
         self.myguinode.publish_start_command(start_command)
 
         # change tab color
-        self.tabs.setTabIcon(self.tab4_index, QIcon('imgs/verde-claro.png'))
+        self.tabs.setTabIcon(self.tab4_index, QIcon(os.path.join(dir_name,'imgs/verde-claro.png')))
 
     def detenerEjercicio(self):
         # send trajectory start command
@@ -433,7 +436,7 @@ class MyTableWidget(QWidget):
         self.myguinode.publish_start_command(start_command)
 
         # change tab color
-        self.tabs.setTabIcon(self.tab4_index, QIcon('imgs/verde-oscuro.jpg'))        
+        self.tabs.setTabIcon(self.tab4_index, QIcon(os.path.join(dir_name,'imgs/verde-oscuro.jpg')))        
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -23,8 +23,22 @@ cartesian_impedance_controller:
     - wrist_1_joint
     - wrist_2_joint
     - wrist_3_joint
-  print_data: false
-
+  print_data: true
+  home_configuration:
+    pose:
+      x: 0.5
+      y: 0.0
+      z: 0.0
+      roll: 0.0
+      pitch: 1.57
+      yaw: 0.0
+    joints:
+      shoulder_pan_joint: -0.187932
+      shoulder_lift_joint: -0.922357
+      elbow_joint: 1.99554
+      wrist_1_joint: -2.62668
+      wrist_2_joint: -1.57547
+      wrist_3_joint: -0.186816
 
 cartesian_adaptive_controller:
   type: effort_controllers/CartesianAdaptiveController
@@ -35,4 +49,19 @@ cartesian_adaptive_controller:
     - wrist_1_joint
     - wrist_2_joint
     - wrist_3_joint  
-  print_data: false  
+  print_data: true
+  home_configuration:
+    pose:
+      x: 0.5
+      y: 0.0
+      z: 0.0
+      roll: 0.0
+      pitch: 1.57
+      yaw: 0.0
+    joints:
+      shoulder_pan_joint: -0.187932
+      shoulder_lift_joint: -0.922357
+      elbow_joint: 1.99554
+      wrist_1_joint: -2.62668
+      wrist_2_joint: -1.57547
+      wrist_3_joint: -0.186816

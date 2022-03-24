@@ -90,6 +90,7 @@ namespace effort_controllers_ns{
 			// Just to print
 			int _counter = 0.0;
 			int _p_rate = 100;
+			bool _print_data;
 			// start flag
 			bool _send_start_command = true;
 			// current joint states
@@ -133,6 +134,13 @@ namespace effort_controllers_ns{
 			bool init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n)
 			{
 				ROS_INFO_STREAM("============================");
+				// print in screen
+				if(!n.getParam("print_data", _print_data))
+				{
+					ROS_ERROR_STREAM("Failed to getParam '" << "print_data" << "' (namespace: " << n.getNamespace() << ").");
+					return false;					
+				}
+
                 // Read joints of robot
 				std::string param_name = "joints";
 				if(!n.getParam(param_name, _joint_names))
@@ -334,7 +342,7 @@ namespace effort_controllers_ns{
 				
 				//print
 				_counter += 1;
-				if (true)
+				if (_print_data)
 				{
 					if (_counter>= 50000){
 						_counter = 0;
@@ -362,7 +370,8 @@ namespace effort_controllers_ns{
 				}
 
 				if ((x_e.block<3,1>(0,0).norm()<0.008) && _send_start_command)
-				{
+				{	
+					std::cout<<"/n/n============================="<<std::endl;
 					std::cout<<"Pose error achieved ..."<<std::endl;
 					std::cout<<"Sending start signal to recieve trajectory ..." <<std::endl;
 					_send_start_command=false;

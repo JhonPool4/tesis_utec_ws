@@ -13,6 +13,7 @@ import pandas as pd 					# Save data
 import numpy as np
 from sensor_msgs.msg import JointState 	# to read angular position and velocity
 from std_msgs.msg import Bool
+from graphical_user_interface.msg import PatientData # patient data
 from my_control_gazebo.msg import Pose # to send pose, dpose and ddpose to robot
 #from labpythonlib.lab_functions import *
 
@@ -21,21 +22,37 @@ class TrajectoryPublisher():
     def __init__(self):
         # create node
         rospy.init_node("node")
+        # subscriber: recieve start signal from gazebo
+        self.sub_gazebo_start_command = rospy.Subscriber('cartesian_impedance_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
+        # subscriber: recieve start signal from gui
+        self.sub_gui_start_command = rospy.Subscriber('gui_start_command', Bool, self.gui_start_cb)
+        # subscriber: recieve patient data
+        self.sub_patient_data = rospy.Subscriber('patient_data', PatientData, self.patient_data_cb)
         # pubisher: end-effector pose         
         self.pub_pose = rospy.Publisher('cartesian_impedance_controller/pose_command', Pose, queue_size=1000)
-        # subscriber: recive start signal
-        self.sub_start_command = rospy.Subscriber('cartesian_impedance_controller/start_command', Bool, self.start_cb)
         # flag to indicates if robot is in home position
         self.home_position = False
+        # flag to enable the exercise start
+        self.send_trajectory = False
+        # patient data (object)
+        self.patient = PatientData()
 
-    def start_cb(self, msg):
+    def gazebo_start_cb(self, msg):
         self.home_position= msg.data
+    
+    def gui_start_cb(self, msg):
+        self.send_trajectory= msg.data
+
+    def  patient_data_cb(self, msg):
+        self.patient.arm_length = msg.arm_length
+        self.patient.radius = msg.radius
+        self.patient.linvel = msg.linvel      
 
     def publish_pose(self, msg):
         self.pub_pose.publish(msg)
 
 def main():
-    # object to manage trajectory sending
+    # object to manage trajectory communication
     trajPub = TrajectoryPublisher()
 
     # object(message)
@@ -46,10 +63,12 @@ def main():
     dt = 1/freq                    # 33  [ms]
     rate = rospy.Rate(freq)        # 100 [Hz]
 
-    # simulation    
+    # simulation time  
     t = 0
+    traj_freq=0.1 # default frequency
+    traj_radius=0.05 # default radius
     while not rospy.is_shutdown():
-        x, dx, ddx = circular_trayectory_generator(t,freq_xyz=0.1, radius=0.05, z_amp=0)
+        x, dx, ddx = circular_trayectory_generator(t,freq_xyz=traj_freq, radius=traj_radius, z_amp=0)
 
         w = rpy2angularVel(x[3:6], dx[3:6])
         dw = rpy2angularAccel(x[3:6], dx[3:6], ddx[3:6])
@@ -77,8 +96,11 @@ def main():
 
         trajPub.publish_pose(pose)
 
-        # update time
-        if trajPub.home_position:
+        if trajPub.home_position and trajPub.send_trajectory:
+            # create a trajectory according to the patient capababilities 
+            traj_radius = (1/1000)*trajPub.patient.radius # from mm to m
+            traj_freq = (1/1000)*trajPub.patient.linvel/(traj_radius*2*np.pi)              
+            # update time
             t=t+dt
 
         # Wait for the next iteration

@@ -10,9 +10,9 @@
         <arg name="control_type" value="impedance" />
     </include>
 
-    <!--run gui-->
-    <node name="gui_node" pkg="graphical_user_interface" type="interface" output="screen" />     
+    <!--run gui -->
+    <node name="gui_node" pkg="graphical_user_interface" type="interface" output="screen" />  
 
-    <!--run exercise 2-->
-    <node name="exercise_2" pkg="motion_ur5_gazebo" type="send_circular_trajectory" output="screen" />     
+    <!--run exercise 2 -->
+    <node name="exercise_2" pkg="motion_ur5_gazebo" type="send_star_trajectory" output="screen" />     
 </launch>

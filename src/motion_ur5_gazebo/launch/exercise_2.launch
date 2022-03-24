@@ -1,14 +1,18 @@
-<launch>
-    <!-- send trajectory of exercise 2 -->
-    <node name="send_circular_trajectory" pkg="motion_ur5_gazebo" type="send_circular_trajectory" output="screen" /> 
-    
+<launch> 
     <!--display ur5 on gazebo-->
     <include file="$(find my_control_gazebo)/launch/ur5_gazebo.launch">
         <arg name="urdf" value="ur5" />
+        <arg name="paused" value="true" />
     </include>
 
-    <!--display ur5 on gazebo-->
+    <!--add impedance control method-->
     <include file="$(find my_control_gazebo)/launch/ur5_controllers.launch">
         <arg name="control_type" value="impedance" />
-    </include>    
+    </include>
+
+    <!--run gui-->
+    <node name="gui_node" pkg="graphical_user_interface" type="interface" output="screen" />     
+
+    <!--run exercise 2-->
+    <node name="exercise_2" pkg="motion_ur5_gazebo" type="send_circular_trajectory" output="screen" />     
 </launch>

@@ -90,8 +90,12 @@ namespace effort_controllers_ns{
 			// Just to print
 			int _counter = 0.0;
 			int _p_rate = 100;
+			bool _print_data;			
 			// start flag
-			bool _send_start_command = true;
+			bool _home_position = false;
+			// control flag
+			bool _allow_task_control = false;
+			bool _allow_adaptation = false;
 			// current joint states
 			my_control_gazebo::Pose _pose;
 
@@ -115,6 +119,9 @@ namespace effort_controllers_ns{
 			Vector_d_6x1 x_e; // error end-effector pose
 			Vector_d_6x1 dx_e; // error end-effector dpose
 			Vector_d_6x1 ddx_e; // error end-effector ddpose
+
+			Vector_d_6x1 _pose0; // initial pose
+			Vector_d_6x1 _q0; // initial joint configuration
 
 			// control terms
 			Vector_d_6x1 F;
@@ -167,6 +174,25 @@ namespace effort_controllers_ns{
 					}
 				}
 				
+				// print in screen
+				n.getParam("print_data", _print_data);
+				ROS_INFO_STREAM("Success to getParam"<<"print_data: "<<_print_data);
+
+				// get initial pose
+				std::vector< std::string > _pose_names = {"x","y","z","roll","pitch","yaw"};
+				for(int i=0; i<6; i++)
+				{
+					n.getParam("home_configuration/pose/"+_pose_names[i], _pose0[i]);	
+					ROS_INFO_STREAM("Success to get home/pose/" << _pose_names[i]<<": "<< _pose0[i]);							
+				}
+
+				// get initial joint configuration
+				for(int i=0; i<6; i++)
+				{
+					n.getParam("home_configuration/joints/"+_joint_names[i], _q0[i]);	
+					ROS_INFO_STREAM("Success to get home/joint/" << _joint_names[i]<<": "<< _q0[i]);							
+				}		
+
 				// resize command buffer with non real time communication
 				_pose_command.writeFromNonRT(std::vector<double>(6, 0.0));
 				_dpose_command.writeFromNonRT(std::vector<double>(6, 0.0));
@@ -221,8 +247,8 @@ namespace effort_controllers_ns{
 			void starting(const ros::Time& time)
 			{
 				// control values according to theraban brand
-				_kp = Matrix_d_6x6::Identity()*200;
-				_kd = Matrix_d_6x6::Identity()*30;
+				_kp = Matrix_d_6x6::Identity()*400;
+				_kd = Matrix_d_6x6::Identity()*2*sqrt(400);
 
 				// new inertia matrix
 				M_hat = Matrix_d_6x6::Zero();
@@ -238,12 +264,11 @@ namespace effort_controllers_ns{
 				std::vector<double> _desired_ddpose(6,0.0);
 
 				// Set desired pose
-				_desired_pose[0] = 0.5;
-				_desired_pose[1] = 0.0;
-				_desired_pose[2] = 0.0;
-				_desired_pose[3] = M_PI/4;
-				_desired_pose[4] = 0.0;
-				_desired_pose[5] = 0.0;
+				for (int i=0; i<6; i++)
+				{
+					_desired_pose[i]=_pose0[i];
+				}
+
 				// Send desired pose
 				_pose_command.initRT(_desired_pose);			  						
 				_dpose_command.initRT(_desired_dpose);
@@ -334,9 +359,39 @@ namespace effort_controllers_ns{
 				// ======================================================
 				//   Fifth stage: Compute control signal      
 				// ======================================================
-				F = (Mx+ M_hat)*(ddpw_des + _kp*x_e + _kd*dx_e) + bx;
-				u = eval_control_limits(J.transpose()*F);
-				//u = J.transpose()*F;
+				if (_allow_task_control)
+				{
+					F = (Mx+ M_hat)*(ddpw_des + _kp*x_e + _kd*dx_e) + bx;
+					u = eval_control_limits(J.transpose()*F);
+
+					if (_allow_adaptation)
+					{
+						// ======================================================
+						//   Sixth stage: Adaptation process      
+						// ======================================================				
+						s = dx_e + 0.5*_kd*x_e;
+						ds = -0.5*_kd*dx_e - _kp*x_e; 
+			
+						if (std::abs(x_e(0)) >= 1e-2){M_hat(0,0) = M_hat(0,0) - _alpha(0,0)*( s(0)*ds(0) );}
+						if (std::abs(x_e(1)) >= 1e-2){M_hat(1,1) = M_hat(1,1) - _alpha(1,1)*( s(1)*ds(1) );}
+						if (std::abs(x_e(2)) >= 1e-2){M_hat(2,2) = M_hat(2,2) - _alpha(2,2)*( s(2)*ds(2) );}
+						if (std::abs(x_e(3)) >= (3*M_PI/180)){M_hat(3,3) = M_hat(3,3) - _alpha(3,3)*( s(3)*ds(3) );}
+						if (std::abs(x_e(4)) >= (3*M_PI/180)){M_hat(4,4) = M_hat(4,4) - _alpha(4,4)*( s(4)*ds(4) );}
+						if (std::abs(x_e(5)) >= (3*M_PI/180)){M_hat(5,5) = M_hat(5,5) - _alpha(5,5)*( s(5)*ds(5) );}					
+					}
+
+				}
+				else
+				{
+					// articular control until achieve home_position
+					u = M*(_kp*(_q0-q) - _kd*dq) + b;
+					// after 5 seconds change to task control
+					if (_counter>=500)
+					{
+						_allow_task_control=true;
+					}
+				}
+
 
 				// send control signal
 				for (int i = 0; i < 6; ++i)
@@ -345,39 +400,10 @@ namespace effort_controllers_ns{
 					_joints[i].setCommand(effort_command);
 				}
 
-				// ======================================================
-				//   Sixth stage: Adaptation process      
-				// ======================================================				
-				s = dx_e + 0.5*_kd*x_e;
-				ds = -0.5*_kd*dx_e - _kp*x_e; 
-				/*
-				for (int i=0; i<6; ++i)
-				{
-					M_hat(i,i) = M_hat(i,i) - _alpha(i,i)*(s(i)*ds(i));
-				}
-				*/
-				
-				
-				if (std::abs(x_e(0)) >= 1e-2){M_hat(0,0) = M_hat(0,0) - _alpha(0,0)*( s(0)*ds(0) );}
-				if (std::abs(x_e(1)) >= 1e-2){M_hat(1,1) = M_hat(1,1) - _alpha(1,1)*( s(1)*ds(1) );}
-				if (std::abs(x_e(2)) >= 1e-2){M_hat(2,2) = M_hat(2,2) - _alpha(2,2)*( s(2)*ds(2) );}
-				if (std::abs(x_e(3)) >= (3*M_PI/180)){M_hat(3,3) = M_hat(3,3) - _alpha(3,3)*( s(3)*ds(3) );}
-				if (std::abs(x_e(4)) >= (3*M_PI/180)){M_hat(4,4) = M_hat(4,4) - _alpha(4,4)*( s(4)*ds(4) );}
-				if (std::abs(x_e(5)) >= (3*M_PI/180)){M_hat(5,5) = M_hat(5,5) - _alpha(5,5)*( s(5)*ds(5) );}
 								
-				/*
-				for(int i=0; i<3; ++i)
-				{
-					if (std::abs(x_e(i)) >= 5e-3){M_hat(i,i) = M_hat(i,i) - _alpha(i)*( s(i)*ds(i) );}	
-				}
-	
-				for(int i=3; i<6; ++i)
-				{
-					if (std::abs(x_e(i)) >= (1*M_PI/180)){M_hat(i,i) = M_hat(i,i) - _alpha(i)*( s(i)*ds(i) );}	
-				}*/
 				//print
 				_counter += 1;
-				if (true)
+				if (_print_data)
 				{
 					if (_counter>= 50000){
 						_counter = 0;
@@ -390,7 +416,8 @@ namespace effort_controllers_ns{
 						//std::cout<<"\nR_med: "<<R_med<<std::endl;
 						//std::cout<<"\nx_des: "<<x_des.transpose()<<std::endl;
 						//std::cout<<"\nR_des: "<<R_des<<std::endl;	
-						std::cout<<"\nrecieving_data: "<<!_send_start_command<<std::endl;	
+						//std::cout<<"\ncounter: "<<_counter<<std::endl;	
+						std::cout<<"\nready to recieve data: "<<_home_position<<std::endl;	
 						std::cout<<"\npos_e: "<<100*x_e.block<3,1>(0,0).transpose()<<" cm"<<std::endl;
 						std::cout<<"\nori_e: "<<(180/M_PI)*x_e.block<3,1>(3,0).transpose()<<" deg"<<std::endl;
 						//std::cout<<"\ndx_e: "<<dx_e.transpose()<<std::endl;
@@ -399,7 +426,7 @@ namespace effort_controllers_ns{
 						//std::cout<<"\ns: "<<s.transpose()<<std::endl;
 						//std::cout<<"\nds: "<<ds.transpose()<<std::endl;
 						std::cout<<"\nM_hat: "<<M_hat.diagonal()<<std::endl;
-						std::cout<<"\nalpha: "<<_alpha.diagonal()<<std::endl;
+						//std::cout<<"\nalpha: "<<_alpha.diagonal()<<std::endl;
 						//std::cout<<"\nddpw_des: "<<ddpw_des<<std::endl;				
 						std::cout<<"\nq: "<<q.transpose()<<std::endl;
 						//std::cout<<"\nJinv: "<<J.inverse()<<std::endl;
@@ -409,15 +436,23 @@ namespace effort_controllers_ns{
 					}
 				}
 
-				if ((x_e.block<3,1>(0,0).norm()<0.008) && _send_start_command)
-				{
-					std::cout<<"Pose error achieved ..."<<std::endl;
+				if (!_home_position && _allow_task_control && (_counter>=1000))
+				{	
+					std::cout<<"\n\n============================="<<std::endl;
+					std::cout<<"Ready to recieve data ..."<<std::endl;
+					std::cout<<"Loading control values and allowing update ..."<<std::endl;
+					// control values according to theraban brand
+					_kp = Matrix_d_6x6::Identity()*200;
+					_kd = Matrix_d_6x6::Identity()*30;
+					// allow adaptation
+					_allow_adaptation=true;
+					// send data
 					std::cout<<"Sending start signal to recieve trajectory ..." <<std::endl;
-					_send_start_command=false;
+					_home_position=true;
 					std_msgs::Bool start_signal;
 					start_signal.data = true;
 					_pub_start_command.publish(start_signal);
-				}
+				}				
 
 
 			}

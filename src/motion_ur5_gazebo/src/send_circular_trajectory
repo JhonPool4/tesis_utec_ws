@@ -23,13 +23,13 @@ class TrajectoryPublisher():
         # create node
         rospy.init_node("node")
         # subscriber: recieve start signal from gazebo
-        self.sub_gazebo_start_command = rospy.Subscriber('cartesian_impedance_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
+        self.sub_gazebo_start_command = rospy.Subscriber('cartesian_adaptive_controller/gazebo_start_command', Bool, self.gazebo_start_cb)
         # subscriber: recieve start signal from gui
         self.sub_gui_start_command = rospy.Subscriber('gui_start_command', Bool, self.gui_start_cb)
         # subscriber: recieve patient data
         self.sub_patient_data = rospy.Subscriber('patient_data', PatientData, self.patient_data_cb)
         # pubisher: end-effector pose         
-        self.pub_pose = rospy.Publisher('cartesian_impedance_controller/pose_command', Pose, queue_size=1000)
+        self.pub_pose = rospy.Publisher('cartesian_adaptive_controller/pose_command', Pose, queue_size=1000)
         # flag to indicates if robot is in home position
         self.home_position = False
         # flag to enable the exercise start

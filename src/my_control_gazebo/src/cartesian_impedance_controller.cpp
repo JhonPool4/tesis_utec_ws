@@ -93,6 +93,8 @@ namespace effort_controllers_ns{
 			bool _print_data;
 			// start flag
 			bool _home_position = false;
+			// control flag
+			bool _allow_task_control = false;
 			// current joint states
 			my_control_gazebo::Pose _pose;
 
@@ -251,12 +253,7 @@ namespace effort_controllers_ns{
 				{
 					_desired_pose[i]=_pose0[i];
 				}
-				//_desired_pose[0] = 0.5;
-				//_desired_pose[1] = 0.0;
-				//_desired_pose[2] = 0.0;
-				//_desired_pose[3] = M_PI/4;
-				//_desired_pose[4] = 0.0;
-				//_desired_pose[5] = 0.0;
+
 				// Send desired pose
 				_pose_command.initRT(_desired_pose);			  						
 				_dpose_command.initRT(_desired_dpose);
@@ -346,7 +343,7 @@ namespace effort_controllers_ns{
 				// ======================================================
 				//   Fifth stage: Compute control signal      
 				// ======================================================
-				if (_home_position)
+				if (_allow_task_control)
 				{
 					F = Mx*(ddpw_des + _kp*x_e + _kd*dx_e) + bx;
 					u = eval_control_limits(J.transpose()*F);
@@ -355,6 +352,11 @@ namespace effort_controllers_ns{
 				{
 					// articular control until achieve home_position
 					u = M*(_kp*(_q0-q) - _kd*dq) + b;
+					// after 5 seconds change to impedance task control
+					if(_counter>=500)
+					{
+						_allow_task_control=true;
+					}
 				}
 
 				// send control signal
@@ -380,7 +382,7 @@ namespace effort_controllers_ns{
 						//std::cout<<"\nR_med: "<<R_med<<std::endl;
 						//std::cout<<"\nx_des: "<<x_des.transpose()<<std::endl;
 						//std::cout<<"\nR_des: "<<R_des<<std::endl;	
-						std::cout<<"\nsend_data: "<<_home_position<<std::endl;	
+						std::cout<<"\nready to recieve data: "<<_home_position<<std::endl;	
 						std::cout<<"\nx_e: "<<x_e.transpose()<<std::endl;
 						std::cout<<"\ndx_e: "<<dx_e.transpose()<<std::endl;
 						std::cout<<"\nnorm_pos: "<<100*x_e.block<3,1>(0,0).norm()<<" cm"<<std::endl;
@@ -394,16 +396,16 @@ namespace effort_controllers_ns{
 					}
 				}
 
-				if ( ( (180/M_PI)*(_q0-q).norm()<=5) && !_home_position)
+				if (!_home_position &&  (100*x_e.block<3,1>(0,0).norm()<=1) && ((180/M_PI)*x_e.block<3,1>(3,0).norm()<=5) )
 				{	
-					std::cout<<"/n/n============================="<<std::endl;
+					std::cout<<"\n\n============================="<<std::endl;
 					std::cout<<"Pose error achieved ..."<<std::endl;
 					std::cout<<"Loading control values according to Theraband ..."<<std::endl;
 					// control values according to theraban brand
 					_kp = Matrix_d_6x6::Identity()*200;
 					_kd = Matrix_d_6x6::Identity()*30;
-					std::cout<<"Sending start signal to recieve trajectory ..." <<std::endl;
-
+					// send start command
+					std::cout<<"Sending start command to recieve trajectory ..." <<std::endl;
 					_home_position=true;
 					std_msgs::Bool start_signal;
 					start_signal.data = true;
